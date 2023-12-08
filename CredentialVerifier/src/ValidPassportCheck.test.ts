@@ -1,5 +1,5 @@
-import { Add } from './ValidPassportCheck';
-import { Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'o1js';
+import { ValidPassportCheck } from './ValidPassportCheck';
+import { Field, Mina, PrivateKey, PublicKey, AccountUpdate, Signature } from 'o1js';
 
 /*
  * This file specifies how to test the `Add` example smart contract. It is safe to delete this file and replace
@@ -10,17 +10,17 @@ import { Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'o1js';
 
 let proofsEnabled = false;
 
-describe('Add', () => {
+describe('ValidPassportCheck', () => {
   let deployerAccount: PublicKey,
     deployerKey: PrivateKey,
     senderAccount: PublicKey,
     senderKey: PrivateKey,
     zkAppAddress: PublicKey,
     zkAppPrivateKey: PrivateKey,
-    zkApp: Add;
+    zkApp: ValidPassportCheck;
 
   beforeAll(async () => {
-    if (proofsEnabled) await Add.compile();
+    if (proofsEnabled) await ValidPassportCheck.compile();
   });
 
   beforeEach(() => {
@@ -32,7 +32,7 @@ describe('Add', () => {
       Local.testAccounts[1]);
     zkAppPrivateKey = PrivateKey.random();
     zkAppAddress = zkAppPrivateKey.toPublicKey();
-    zkApp = new Add(zkAppAddress);
+    zkApp = new ValidPassportCheck(zkAppAddress);
   });
 
   async function localDeploy() {
@@ -45,23 +45,26 @@ describe('Add', () => {
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   }
 
-  it('generates and deploys the `Add` smart contract', async () => {
+  it('generates and deploys the `ValidPassportCheck` smart contract', async () => {
     await localDeploy();
-    const num = zkApp.num.get();
+    const num = zkApp.creatorPublicKey.get();
     expect(num).toEqual(Field(1));
   });
 
-  it('correctly updates the num state on the `Add` smart contract', async () => {
+  it('correctly updates the num state on the `ValidPassportCheck` smart contract', async () => {
     await localDeploy();
+    const number = Field(1234);
+    const privateKey = PrivateKey.random();
+    const signature = Signature.create(privateKey, [number]);
 
     // update transaction
     const txn = await Mina.transaction(senderAccount, () => {
-      zkApp.update();
+      zkApp.verify(number, senderAccount, signature);
     });
     await txn.prove();
     await txn.sign([senderKey]).send();
 
-    const updatedNum = zkApp.num.get();
+    const updatedNum = zkApp.creatorPublicKey.get();
     expect(updatedNum).toEqual(Field(3));
   });
 });

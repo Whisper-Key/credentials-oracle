@@ -1,22 +1,26 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import { CredentialRepository } from 'contract-is-key';
 const app = express();
 const port = process.env.PORT || 3001; // Set your desired port
 
 // Middleware
 app.use(cors());
 
-app.get('/api/credentials', (req: Request, res: Response) => {
-  res.send([{ id: 1, name: 'Passport', creator: 'B62qrZhVxxpGGTjWXntrDh5qCC3kboUQ1zjnayYLppMZZ4vfdX8F3x5' }, 
-  { id: 2, name: 'DriversPermit', creator: 'B62qrZhVxxpGGTjWXntrDh5qCC3kboUQ1zjnayYLppMZZ4vfdX8F3x5' }
-]);
+app.get('/api/credentials', async (req: Request, res: Response) => {
+  const repo =  await new CredentialRepository();
+  const credentials = await repo.GetAllCredentials();
+  const projection = credentials.map(c => ({ name: c.name, owner: c.owner, description: c.description, contractPublicKey: c.contractPublicKey }));
+  res.send(projection);
 });
 
-app.get('/api/:credential/:owner', (req: Request, res: Response) => {
-  res.send({ 
-    credential: req.params.credential,
-    owner: req.params.owner
-  });
+app.get('/api/:credential/:owner', async (req: Request, res: Response) => {
+
+  const repo =  await new CredentialRepository();
+  const credentialStore = await repo.GetCredentialStore(req.params.credential);
+  const credential = await credentialStore.get(req.params.owner);
+
+  res.send(credential);
 });
 
 
