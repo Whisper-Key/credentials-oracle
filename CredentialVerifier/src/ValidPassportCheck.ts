@@ -21,4 +21,11 @@ export class ValidPassportCheck extends SmartContract {
     validSignature.assertTrue();
     // verify expiry date
   }
+  @method verifyComplex(passportNumber: Field, expiryDate: CircuitString, owner: PublicKey, signature: Signature) {
+    const creator = this.creatorPublicKey.getAndAssertEquals();
+    // determine how to verify the signature
+    const validSignature = signature.verify(creator, [passportNumber].concat(expiryDate.toFields()).concat(owner.toFields()));
+    validSignature.assertTrue();
+    // verify expiry date
+  }
 }

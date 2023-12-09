@@ -1,5 +1,5 @@
 import { ValidPassportCheck } from './ValidPassportCheck';
-import { Field, Mina, PrivateKey, PublicKey, AccountUpdate, Signature } from 'o1js';
+import { Field, Mina, PrivateKey, PublicKey, AccountUpdate, Signature, CircuitString } from 'o1js';
 import dotenv from 'dotenv';
 /*
  * This file specifies how to test the `Add` example smart contract. It is safe to delete this file and replace
@@ -26,7 +26,6 @@ describe('ValidPassportCheck', () => {
   });
 
   beforeEach(() => {
-    console.log(process.env.ORACLE_KEY);
     oracleKey = PrivateKey.fromBase58(process.env.ORACLE_KEY!);
 
     const Local = Mina.LocalBlockchain({ proofsEnabled });
@@ -54,7 +53,6 @@ describe('ValidPassportCheck', () => {
   it('generates and deploys the `ValidPassportCheck` smart contract', async () => {
     await localDeploy();
     const num = zkApp.creatorPublicKey.get();
-    console.log(process.env.ORACLE_KEY);
     expect(num.toBase58()).toEqual(oracleKey.toPublicKey().toBase58());
   });
 
@@ -72,5 +70,62 @@ describe('ValidPassportCheck', () => {
 
     // const updatedNum = zkApp.creatorPublicKey.get();
     // expect(updatedNum).toEqual(Field(3));
+  });
+
+  it('correctly verifies complex fields signature', async () => {
+    const number = Field(1234);
+    const expiryDate = CircuitString.fromString("2021-08-31");
+    const signature = Signature.create(oracleKey, [number].concat(expiryDate.toFields()).concat(senderAccount.toFields()));
+
+
+    const validSignature = signature.verify(oracleKey.toPublicKey(), [number].concat(expiryDate.toFields()).concat(senderAccount.toFields()));
+
+    expect(validSignature.toBoolean()).toBeTruthy();
+  });
+
+  it('correctly asserts false for invalid complex fields signature', async () => {
+    const number = Field(1234);
+    const expiryDate = CircuitString.fromString("2021-08-31");
+    const signature = Signature.create(oracleKey, [number].concat(expiryDate.toFields()).concat(senderAccount.toFields()));
+
+    const validSignature = signature.verify(oracleKey.toPublicKey(), [Field(234)].concat(expiryDate.toFields()).concat(senderAccount.toFields()));
+
+    expect(validSignature.toBoolean()).toBeFalsy();
+  });
+
+  it('correctly verifies complex fields signature on the `ValidPassportCheck` smart contract', async () => {
+    await localDeploy();
+    const number = Field(1234);
+    const expiryDate = CircuitString.fromString("2021-08-31");
+    const signature = Signature.create(oracleKey, [number].concat(expiryDate.toFields()).concat(senderAccount.toFields()));
+
+    // update transaction
+    const txn = await Mina.transaction(senderAccount, () => {
+      zkApp.verifyComplex(number, expiryDate, senderAccount, signature);
+    });
+    await txn.prove();
+    await txn.sign([senderKey]).send();
+  });
+
+  it('correctly asserts false for complex fields signature on the `ValidPassportCheck` smart contract', async () => {
+    await localDeploy();
+    let message = '';
+    const number = Field(1234);
+    const expiryDate = CircuitString.fromString("2021-08-31");
+    const signature = Signature.create(oracleKey, [number].concat(expiryDate.toFields()).concat(senderAccount.toFields()));
+
+    try {
+      // update transaction
+      const txn = await Mina.transaction(senderAccount, () => {
+        zkApp.verifyComplex(Field(234), expiryDate, senderAccount, signature);
+      });
+      
+      await txn.prove();
+      await txn.sign([senderKey]).send();
+    } catch (err: any) {
+      message = err.message;
+    }
+    expect(message).toEqual('Bool.assertTrue(): false != true');
+
   });
 });
