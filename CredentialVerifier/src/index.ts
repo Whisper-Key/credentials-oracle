@@ -1,3 +1,3 @@
-import { Add } from './ValidPassportCheck.js';
+import { ValidPassportCheck } from './ValidPassportCheck.js';
 
-export { Add };
+export { ValidPassportCheck };

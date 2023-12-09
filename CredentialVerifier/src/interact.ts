@@ -14,7 +14,7 @@
  */
 import fs from 'fs/promises';
 import { Mina, PrivateKey } from 'o1js';
-import { Add } from './ValidPassportCheck.js';
+import { ValidPassportCheck } from './ValidPassportCheck.js';
 
 // check command line arg
 let deployAlias = process.argv[2];
@@ -58,17 +58,17 @@ const fee = Number(config.fee) * 1e9; // in nanomina (1 billion = 1.0 mina)
 Mina.setActiveInstance(Network);
 let feepayerAddress = feepayerKey.toPublicKey();
 let zkAppAddress = zkAppKey.toPublicKey();
-let zkApp = new Add(zkAppAddress);
+let zkApp = new ValidPassportCheck(zkAppAddress);
 
 let sentTx;
 // compile the contract to create prover keys
 console.log('compile the contract...');
-await Add.compile();
+await ValidPassportCheck.compile();
 try {
   // call update() and send transaction
   console.log('build transaction and create proof...');
   let tx = await Mina.transaction({ sender: feepayerAddress, fee }, () => {
-    zkApp.update();
+   // zkApp.verify();
   });
   await tx.prove();
   console.log('send transaction...');

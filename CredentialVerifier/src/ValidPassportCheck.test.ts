@@ -1,6 +1,6 @@
 import { ValidPassportCheck } from './ValidPassportCheck';
 import { Field, Mina, PrivateKey, PublicKey, AccountUpdate, Signature } from 'o1js';
-
+import dotenv from 'dotenv';
 /*
  * This file specifies how to test the `Add` example smart contract. It is safe to delete this file and replace
  * with your own tests.
@@ -17,13 +17,18 @@ describe('ValidPassportCheck', () => {
     senderKey: PrivateKey,
     zkAppAddress: PublicKey,
     zkAppPrivateKey: PrivateKey,
+    oracleKey: PrivateKey,
     zkApp: ValidPassportCheck;
 
   beforeAll(async () => {
     if (proofsEnabled) await ValidPassportCheck.compile();
+    dotenv.config()
   });
 
   beforeEach(() => {
+    console.log(process.env.ORACLE_KEY);
+    oracleKey = PrivateKey.fromBase58(process.env.ORACLE_KEY!);
+
     const Local = Mina.LocalBlockchain({ proofsEnabled });
     Mina.setActiveInstance(Local);
     ({ privateKey: deployerKey, publicKey: deployerAccount } =
@@ -39,6 +44,7 @@ describe('ValidPassportCheck', () => {
     const txn = await Mina.transaction(deployerAccount, () => {
       AccountUpdate.fundNewAccount(deployerAccount);
       zkApp.deploy();
+      zkApp.initState(oracleKey.toPublicKey());
     });
     await txn.prove();
     // this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
@@ -48,14 +54,14 @@ describe('ValidPassportCheck', () => {
   it('generates and deploys the `ValidPassportCheck` smart contract', async () => {
     await localDeploy();
     const num = zkApp.creatorPublicKey.get();
-    expect(num).toEqual(Field(1));
+    console.log(process.env.ORACLE_KEY);
+    expect(num.toBase58()).toEqual(oracleKey.toPublicKey().toBase58());
   });
 
-  it('correctly updates the num state on the `ValidPassportCheck` smart contract', async () => {
+  it('correctly verifies the signature on the `ValidPassportCheck` smart contract', async () => {
     await localDeploy();
     const number = Field(1234);
-    const privateKey = PrivateKey.random();
-    const signature = Signature.create(privateKey, [number]);
+    const signature = Signature.create(oracleKey, [number]);
 
     // update transaction
     const txn = await Mina.transaction(senderAccount, () => {
@@ -64,7 +70,7 @@ describe('ValidPassportCheck', () => {
     await txn.prove();
     await txn.sign([senderKey]).send();
 
-    const updatedNum = zkApp.creatorPublicKey.get();
-    expect(updatedNum).toEqual(Field(3));
+    // const updatedNum = zkApp.creatorPublicKey.get();
+    // expect(updatedNum).toEqual(Field(3));
   });
 });
