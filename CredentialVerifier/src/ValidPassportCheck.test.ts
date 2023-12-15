@@ -60,7 +60,7 @@ describe('ValidPassportCheck', () => {
     await localDeploy();
     const number = Field(1234);
     const signature = Signature.create(oracleKey, [number]);
-
+    
     // update transaction
     const txn = await Mina.transaction(senderAccount, () => {
       zkApp.verify(number, senderAccount, signature);

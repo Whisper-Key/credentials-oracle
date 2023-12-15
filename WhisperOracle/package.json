@@ -19,7 +19,9 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "contract-is-key": "^0.2.3",
-    "cors": "^2.8.5"
+    "contract-is-key": "^0.3.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "o1js": "^0.13.1"
   }
 }
