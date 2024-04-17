@@ -25,7 +25,7 @@ app.get('/api/:credential/:owner', async (req: Request, res: Response) => {
   const metadata = await repo.GetCredentialByName(req.params.credential);
   const privateKey = process.env.ORACLE_KEY!;
   console.log("private key", privateKey);
-  const signedCredential = new SignedCredential(metadata, privateKey);
+  const signedCredential = new SignedCredential(metadata!, privateKey);
 
   const credentialStore = await repo.GetCredentialStore(req.params.credential);
   const credential = await credentialStore.get(req.params.owner);
@@ -35,7 +35,7 @@ app.get('/api/:credential/:owner', async (req: Request, res: Response) => {
     return;
   } else {
 
-    const zkAppAddress = PublicKey.fromBase58(metadata.contractPublicKey);
+    const zkAppAddress = PublicKey.fromBase58(metadata!.contractPublicKey);
     const proofsEnabled = false;
     const path = `../public/credentials/${req.params.credential}Contract.js`
 
